@@ -1,0 +1,205 @@
+/*
+ * This file is part of MiToBo, the Microscope Image Analysis Toolbox.
+ *
+ * Copyright (C) 2010 - 2014
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Fore more information on MiToBo, visit
+ *
+ *    http://www.informatik.uni-halle.de/mitobo/
+ *
+ */
+
+package einfBV.serie_04.aufgabe_1;
+
+import de.unihalle.informatik.Alida.exceptions.ALDOperatorException;
+
+import de.unihalle.informatik.Alida.annotations.ALDAOperator;
+import de.unihalle.informatik.Alida.annotations.ALDAOperator.Level;
+import de.unihalle.informatik.Alida.annotations.Parameter;
+import de.unihalle.informatik.MiToBo.core.datatypes.images.*;
+import de.unihalle.informatik.MiToBo.core.operator.*;
+
+/**
+ * Operator generating random barcodes of type Code-11.
+ */
+
+// This annotation is necessary for MiToBo to automatically index the operator.
+@ALDAOperator(genericExecutionMode=ALDAOperator.ExecutionMode.ALL,
+		level=Level.APPLICATION)
+public class MiToBoCodeElevenDecoder extends MTBOperator {
+
+	/**
+	 * 8-bit input image.
+	 */
+	@Parameter( label= "Input Image", required = true, dataIOOrder = 0,
+		direction = Parameter.Direction.IN, description = "Input image.")
+	private MTBImageByte inImg = null;
+
+	/**
+	 * Output string with digits.
+	 */
+	@Parameter( label= "Result String", required = true,
+			direction = Parameter.Direction.OUT, description = "Result.")
+	private String digitString = null;
+
+	/**
+	 * Default constructor, always required even if nothing happens here!
+	 *  @throws ALDOperatorException Thrown in case of failure.
+	 */
+	public MiToBoCodeElevenDecoder() throws ALDOperatorException {
+		// nothing to do here
+	}		
+
+	/**
+	 * Set input image.
+	 * @param img	Image to decode.
+	 */
+	public void setImage(MTBImageByte img) {
+		this.inImg = img;
+	}
+	
+	/**
+	 * Get result string.
+	 * @return	Result string.
+	 */
+	public String getResult() {
+		return this.digitString;
+	}
+	
+	/**
+	 * This method does the actual work and is mandatory.
+	 */
+	@Override
+	protected void operate() {
+		
+		int currentPix = 0;
+		int lastPix = this.inImg.getSizeX();
+		
+		//Rauschen entfernen in der ersten Zeile
+//		int y=0;
+//		for(int x=0; x<this.inImg.getSizeX(); x++) {
+//				boolean valueCheck = checkSurrounding(x,y);
+//				if(valueCheck == true) {
+//					this.inImg.putValueInt(x, y, 0);
+//				} else this.inImg.putValueInt(x, y, 255);
+//		}
+		//prueft ob links ein weißer Rand vor dem ersten Balken ist
+		while(this.inImg.getValueInt(currentPix, 0)==255) {
+			currentPix++;
+		}
+		//prueft ob rechts ein weißer Rand nach dem letzten Balken ist
+		while(this.inImg.getValueInt(lastPix, 0)==255) {
+			lastPix--;
+		}
+		
+		//behebt das Rauschen
+		int black = 0;
+		int white = 0;
+		for(int x=0; x<this.inImg.getSizeX(); x++) {
+			for(int y=0; y<this.inImg.getSizeY(); y++) {
+				if(this.inImg.getValueInt(x, y)== 0) black++;
+				else white++;
+			}
+			if(black>white) {
+				for(int y=0; y<this.inImg.getSizeY(); y++) {
+					this.inImg.putValueInt(x, y, 0);
+				}
+			} else {
+				for(int y=0; y<this.inImg.getSizeY(); y++) {
+					this.inImg.putValueInt(x, y, 255);
+				}
+			}
+		}
+		
+		
+
+		while(currentPix<lastPix) {
+			if(this.inImg.getValueInt(currentPix+2, 0)==0) { //prueft ob kleiner Balken
+				//0
+				if(this.inImg.getValueInt(currentPix+5, 0)==255&&this.inImg.getValueInt(currentPix+8, 0)==0
+					&&this.inImg.getValueInt(currentPix+11, 0)==255&&this.inImg.getValueInt(currentPix+17, 0)==0) {
+						this.digitString += "0";
+						currentPix += 20;
+						continue;
+				}
+				//2
+				if(this.inImg.getValueInt(currentPix+8, 0)== 255&&this.inImg.getValueInt(currentPix+11, 0)==0
+					&&this.inImg.getValueInt(currentPix+14, 0)==255&&this.inImg.getValueInt(currentPix+20, 0)==0) {
+						this.digitString += "2";
+						currentPix += 23;
+						continue;
+				}
+				//4
+				if(this.inImg.getValueInt(currentPix+5, 0)== 255&&this.inImg.getValueInt(currentPix+11, 0)==0
+					&&this.inImg.getValueInt(currentPix+14, 0)==255&&this.inImg.getValueInt(currentPix+20, 0)==0) {
+						this.digitString += "4";
+						currentPix += 23;
+						continue;
+				}
+				//6
+				if(this.inImg.getValueInt(currentPix+8, 0)== 255&&this.inImg.getValueInt(currentPix+14, 0)==0
+					&&this.inImg.getValueInt(currentPix+17, 0)==255&&this.inImg.getValueInt(currentPix+20, 0)==0) {
+						this.digitString += "6";
+						currentPix += 23;
+						continue;
+				}
+				//7
+				if(this.inImg.getValueInt(currentPix+5, 0)== 255&&this.inImg.getValueInt(currentPix+8, 0)==0
+					&&this.inImg.getValueInt(currentPix+14, 0)==255&&this.inImg.getValueInt(currentPix+20, 0)==0) {
+						this.digitString += "7";
+						currentPix += 23;
+						continue;
+				}
+			} else if(this.inImg.getValueInt(currentPix+5, 0)==0) { //prueft ob grosser Balken
+				//1 done
+				if(this.inImg.getValueInt(currentPix+8, 0)== 255&&this.inImg.getValueInt(currentPix+11, 0)==0
+					&&this.inImg.getValueInt(currentPix+14, 0)== 255&&this.inImg.getValueInt(currentPix+20, 0)==0) {
+						this.digitString += "1";
+						currentPix += 23;
+						continue;
+				}
+				//3 done
+				if(this.inImg.getValueInt(currentPix+11, 0)== 255&&this.inImg.getValueInt(currentPix+14, 0)==0
+						&&this.inImg.getValueInt(currentPix+17, 0)== 255&&this.inImg.getValueInt(currentPix+20, 0)==0) {
+							this.digitString += "1";
+							currentPix += 23;
+							continue;
+					}
+				//5 done
+				if(this.inImg.getValueInt(currentPix+8, 0)== 255&&this.inImg.getValueInt(currentPix+14, 0)==0
+						&&this.inImg.getValueInt(currentPix+17, 0)== 255&&this.inImg.getValueInt(currentPix+20, 0)==0) {
+							this.digitString += "1";
+							currentPix += 23;
+							continue;
+					}
+				//8 done
+				if(this.inImg.getValueInt(currentPix+8, 0)== 255&&this.inImg.getValueInt(currentPix+11, 0)==0
+						&&this.inImg.getValueInt(currentPix+17, 0)== 255&&this.inImg.getValueInt(currentPix+20, 0)==0) {
+							this.digitString += "1";
+							currentPix += 23;
+							continue;
+					}
+				//9
+				if(this.inImg.getValueInt(currentPix+8, 0)== 255&&this.inImg.getValueInt(currentPix+11, 0)==0
+						&&this.inImg.getValueInt(currentPix+14, 0)== 255&&this.inImg.getValueInt(currentPix+17, 0)==0) {
+							this.digitString += "1";
+							currentPix += 20;
+							continue;
+					}
+			}
+		}				
+	}
+} 
